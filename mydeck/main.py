@@ -1,6 +1,6 @@
 import threading
 
-from deck import (
+from mydeck.deck import (
     Deck,
     Context,
     Group,
@@ -11,8 +11,8 @@ from deck import (
     GaugeIcon,
     MarkerIcon,
 )
-from testapps import CounterKey, ClockKey, StopWatchKey, KitchenTimerKey
-from remo import (
+from mydeck.testapps import CounterKey, ClockKey, StopWatchKey, KitchenTimerKey
+from mydeck.remo import (
     ACPowerKey,
     ACModeKeySet,
     ACModeKeySetting,

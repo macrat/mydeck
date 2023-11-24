@@ -9,7 +9,7 @@ import time
 
 import aiohttp
 
-from deck import Application, Context, Icon, ColorIcon, TextIcon, GaugeIcon
+from mydeck.deck import Application, Context, Icon, ColorIcon, TextIcon, GaugeIcon
 
 
 @dataclass

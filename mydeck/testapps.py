@@ -3,7 +3,7 @@ import threading
 import time
 from datetime import timedelta
 
-from deck import TextIcon, Context, Application, LongPressKey, ToggleKey
+from mydeck.deck import TextIcon, Context, Application, LongPressKey, ToggleKey
 
 
 class CounterKey(LongPressKey):

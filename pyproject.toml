@@ -1,0 +1,15 @@
+[project]
+name = "mydeck"
+version = "0.1.0"
+
+dependencies = [
+  "streamdeck",
+  "Pillow",
+  "aiohttp"
+]
+
+[project.optional-dependencies]
+dev = [
+  "black",
+  "mypy"
+]

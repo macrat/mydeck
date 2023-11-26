@@ -13,7 +13,6 @@ from mydeck.deck import (
 )
 from mydeck.testapps import CounterKey, ClockKey, StopWatchKey, KitchenTimerKey
 from mydeck.remo import (
-    ACPowerKey,
     ACModeKeySet,
     ACModeKeySetting,
     ACTempKeySet,
@@ -72,13 +71,6 @@ def main() -> None:
             ),
             "AC": Group(
                 [
-                    ACPowerKey(
-                        {0},
-                        "02f3e48c-50c8-40f2-aac8-5828d0abef1f",
-                        MarkerIcon(text="ON", position="left", kind="triangle"),
-                        MarkerIcon(text="OFF", position="left", kind="triangle"),
-                        MarkerIcon(text="...", position="left", kind="triangle"),
-                    ),
                     ACModeKeySet(
                         "02f3e48c-50c8-40f2-aac8-5828d0abef1f",
                         {
@@ -107,6 +99,9 @@ def main() -> None:
                     ACTempKeySet("02f3e48c-50c8-40f2-aac8-5828d0abef1f", 3, 8, 13),
                     RoomTempKey({11}, "416bbca3-eb0b-4095-817d-aa7e455d89eb"),
                     ACVolumeKey({12}, "02f3e48c-50c8-40f2-aac8-5828d0abef1f"),
+                    StaticKey(
+                        {0}, MarkerIcon(text="AC", position="left", kind="triangle")
+                    ),
                     PagerKey({5}, "LIGHT", MarkerIcon(text="LIGHT", position="left")),
                     PagerKey({10}, "SCENE", MarkerIcon(text="SCENE", position="left")),
                     PagerKey({4}, "AUDIO", MarkerIcon(text="AUDIO", position="right")),

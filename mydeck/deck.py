@@ -149,12 +149,7 @@ class GaugeIcon(Icon):
             draw.rectangle((0, 0, self.width, 71), fill=self.gauge)
             draw.rectangle((71 - self.width, 0, 71, 71), fill=self.gauge)
 
-        if self.value <= 0:
-            if self.horizontal:
-                draw.line((0, 0, 0, 71), fill=self.fg)
-            else:
-                draw.line((0, 71, 71, 71), fill=self.fg)
-        else:
+        if self.value > 0:
             key_size = 71
             margin_size = 13
             total_length = key_size * self.n_keys + margin_size * (self.n_keys - 1)

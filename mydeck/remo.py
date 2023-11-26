@@ -42,7 +42,9 @@ class ACState:
 
 
 class NatureRemo:
+    room_lock: asyncio.Lock = asyncio.Lock()
     room_cache: dict[str, RoomState] = {}
+    ac_lock: asyncio.Lock = asyncio.Lock()
     ac_cache: dict[str, ACState] = {}
 
     @staticmethod
@@ -77,53 +79,56 @@ class NatureRemo:
 
     @classmethod
     async def get_room_state(cls, device_id: str, force=False) -> RoomState:
-        if device_id in NatureRemo.room_cache and not force:
-            if NatureRemo.room_cache[device_id].timestamp > datetime.now() - timedelta(
-                minutes=1
-            ):
-                return NatureRemo.room_cache[device_id]
+        async with cls.room_lock:
+            if device_id in NatureRemo.room_cache and not force:
+                if NatureRemo.room_cache[
+                    device_id
+                ].timestamp > datetime.now() - timedelta(minutes=1):
+                    return NatureRemo.room_cache[device_id]
 
-        devices = await NatureRemo.get_devices()
-        for device in devices:
-            if device["id"] == device_id:
-                cls.room_cache[device_id] = RoomState(
-                    temperature=devices[0]["newest_events"]["te"]["val"],
-                    timestamp=datetime.now(),
-                )
+            devices = await NatureRemo.get_devices()
+            for device in devices:
+                if device["id"] == device_id:
+                    cls.room_cache[device_id] = RoomState(
+                        temperature=devices[0]["newest_events"]["te"]["val"],
+                        timestamp=datetime.now(),
+                    )
 
-                return cls.room_cache[device_id]
-        raise ValueError(f"Device {device_id} is not found")
+                    return cls.room_cache[device_id]
+
+            raise ValueError(f"Device {device_id} is not found")
 
     @classmethod
     async def get_ac_state(cls, appliance_id: str, force=False) -> ACState:
-        if appliance_id in NatureRemo.ac_cache and not force:
-            if NatureRemo.ac_cache[appliance_id].timestamp > datetime.now() - timedelta(
-                minutes=1
-            ):
-                return NatureRemo.ac_cache[appliance_id]
+        async with cls.ac_lock:
+            if appliance_id in NatureRemo.ac_cache and not force:
+                if NatureRemo.ac_cache[
+                    appliance_id
+                ].timestamp > datetime.now() - timedelta(minutes=1):
+                    return NatureRemo.ac_cache[appliance_id]
 
-        appliances = await cls.get_appliances()
+            appliances = await cls.get_appliances()
 
-        for appliance in appliances:
-            if appliance["id"] == appliance_id:
-                cls.ac_cache[appliance_id] = ACState(
-                    temperature=appliance["settings"]["temp"],
-                    temperature_list=appliance["aircon"]["range"]["modes"][
-                        appliance["settings"]["mode"]
-                    ]["temp"],
-                    mode=appliance["settings"]["mode"],
-                    mode_list=appliance["aircon"]["range"]["modes"].keys(),
-                    volume=appliance["settings"]["vol"],
-                    volume_list=appliance["aircon"]["range"]["modes"][
-                        appliance["settings"]["mode"]
-                    ]["vol"],
-                    power=appliance["settings"]["button"] != "power-off",
-                    timestamp=datetime.now(),
-                )
+            for appliance in appliances:
+                if appliance["id"] == appliance_id:
+                    cls.ac_cache[appliance_id] = ACState(
+                        temperature=appliance["settings"]["temp"],
+                        temperature_list=appliance["aircon"]["range"]["modes"][
+                            appliance["settings"]["mode"]
+                        ]["temp"],
+                        mode=appliance["settings"]["mode"],
+                        mode_list=appliance["aircon"]["range"]["modes"].keys(),
+                        volume=appliance["settings"]["vol"],
+                        volume_list=appliance["aircon"]["range"]["modes"][
+                            appliance["settings"]["mode"]
+                        ]["vol"],
+                        power=appliance["settings"]["button"] != "power-off",
+                        timestamp=datetime.now(),
+                    )
 
-                return cls.ac_cache[appliance_id]
+                    return cls.ac_cache[appliance_id]
 
-        raise ValueError(f"Appliance {appliance_id} is not found")
+            raise ValueError(f"Appliance {appliance_id} is not found")
 
     @classmethod
     async def set_ac_state(cls, appliance_id: str, state: ACState) -> None:
@@ -185,44 +190,6 @@ class ACKey(Application, ABC):
         return self.__loading
 
 
-class ACPowerKey(ACKey):
-    def __init__(
-        self,
-        key_numbers: set[int],
-        appliance_id: str,
-        on_icon: Icon,
-        off_icon: Icon,
-        loading_icon: Icon = ColorIcon(),
-    ):
-        super().__init__(key_numbers, appliance_id, loading_icon)
-
-        self.showing = False
-
-        self.on_icon = on_icon
-        self.off_icon = off_icon
-        self.loading_icon = loading_icon
-
-    async def draw(self, ctx: Context):
-        if not self.showing:
-            return
-
-        if self.loading:
-            ctx.set_image(self.key_numbers, self.loading_icon)
-            return
-
-        if (await self.get_state()).power:
-            icon = self.on_icon
-        else:
-            icon = self.off_icon
-
-        ctx.set_image(self.key_numbers, icon)
-
-    async def on_press(self, ctx: Context, key_number: int):
-        state = await self.get_state()
-        state.power = not state.power
-        await self.set_state(ctx, state)
-
-
 @dataclass
 class ACModeKeySetting:
     mode: str
@@ -260,14 +227,20 @@ class ACModeKeySet(ACKey):
         state = await self.get_state()
 
         for key, setting in self.keys.items():
-            ctx.set_image({key}, setting.icon(on=state.mode == setting.mode))
+            ctx.set_image(
+                {key}, setting.icon(on=state.power and state.mode == setting.mode)
+            )
 
     async def on_press(self, ctx: Context, key_number: int):
         if key_number not in self.keys:
             return
 
         state = await self.get_state()
-        state.mode = self.keys[key_number].mode
+        if state.power and state.mode == self.keys[key_number].mode:
+            state.power = False
+        else:
+            state.mode = self.keys[key_number].mode
+            state.power = True
         await self.set_state(ctx, state)
 
 

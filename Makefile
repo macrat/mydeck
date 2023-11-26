@@ -1,7 +1,7 @@
 .PHONY: run lint test fmt setup
 
 run:
-	.venv/bin/python mydeck/main.py
+	.venv/bin/python -m mydeck
 
 lint:
 	.venv/bin/mypy . --ignore-missing-imports

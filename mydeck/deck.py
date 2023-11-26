@@ -302,16 +302,25 @@ class Context:
     def execute_application(self, app: "Application") -> None:
         def on_key_callback(key_number: int, state: bool) -> None:
             async def run() -> None:
-                if state:
-                    await app.on_press(self, key_number)
-                else:
-                    await app.on_release(self, key_number)
+                try:
+                    if state:
+                        await app.on_press(self, key_number)
+                    else:
+                        await app.on_release(self, key_number)
+                except Exception as e:
+                    print(e, file=sys.stderr)
 
             self.runner.now(run)
 
         self.deck.on_key_callback = on_key_callback
 
-        asyncio.run(app.on_display(self))
+        async def on_display() -> None:
+            try:
+                await app.on_display(self)
+            except Exception as e:
+                print(e, file=sys.stderr)
+
+        asyncio.run(on_display())
         self.runner.start()
 
 

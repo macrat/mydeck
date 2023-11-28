@@ -246,10 +246,16 @@ class ACModeKeySet(ACKey):
 
 class ACTempKeySet(ACKey):
     def __init__(
-        self, appliance_id: str, up_key: int, middle_key: int, bottom_key: int
+        self,
+        device_id: str,
+        appliance_id: str,
+        up_key: int,
+        middle_key: int,
+        bottom_key: int,
     ):
         super().__init__({up_key, middle_key, bottom_key}, appliance_id, ColorIcon())
 
+        self.device_id = device_id
         self.up_key = up_key
         self.middle_key = middle_key
         self.bottom_key = bottom_key
@@ -257,7 +263,9 @@ class ACTempKeySet(ACKey):
         self.target = -1
 
     async def draw(self, ctx: Context):
-        state = await self.get_state()
+        state, room = await asyncio.gather(
+            self.get_state(), NatureRemo.get_room_state(self.device_id)
+        )
 
         if state.temperature == "" or state.temperature not in state.temperature_list:
             ctx.set_image({self.up_key, self.bottom_key}, ColorIcon((64, 64, 64)))
@@ -276,7 +284,12 @@ class ACTempKeySet(ACKey):
         )
         ctx.set_image(
             {self.middle_key},
-            GaugeIcon(text=f"{temp}℃", value=level, n_keys=3, key_offset=1),
+            GaugeIcon(
+                text=f"cur:{room.temperature:.1f}\ntgt:{float(temp):.1f}",
+                value=level,
+                n_keys=3,
+                key_offset=1,
+            ),
         )
         ctx.set_image(
             {self.bottom_key}, GaugeIcon(text="▼", value=level, n_keys=3, key_offset=0)
@@ -395,3 +408,27 @@ class RoomTempKey(Application):
 
     async def on_hide(self, ctx: Context) -> None:
         self.showing = False
+
+
+class SimpleRemoKey(Application):
+    def __init__(self, key_numbers: set[int], signal_id: str, icon: Icon):
+        super().__init__(key_numbers)
+
+        self.signal_id = signal_id
+        self.icon = icon
+
+    async def on_display(self, ctx: Context):
+        ctx.set_image(self.key_numbers, self.icon)
+
+    async def on_press(self, ctx: Context, key_number: int):
+        await NatureRemo.request(
+            f"/1/signals/{self.signal_id}/send", method="POST", body={}
+        )
+
+
+if __name__ == "__main__":
+
+    async def main():
+        print(json.dumps(await NatureRemo.get_appliances(), indent=2))
+
+    asyncio.run(main())

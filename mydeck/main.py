@@ -17,7 +17,7 @@ from mydeck.remo import (
     ACModeKeySetting,
     ACTempKeySet,
     ACVolumeKey,
-    RoomTempKey,
+    SimpleRemoKey,
 )
 from mydeck.hue import LightKey
 
@@ -96,8 +96,18 @@ def main() -> None:
                             ),
                         },
                     ),
-                    ACTempKeySet("02f3e48c-50c8-40f2-aac8-5828d0abef1f", 3, 8, 13),
-                    RoomTempKey({11}, "416bbca3-eb0b-4095-817d-aa7e455d89eb"),
+                    ACTempKeySet(
+                        "416bbca3-eb0b-4095-817d-aa7e455d89eb",
+                        "02f3e48c-50c8-40f2-aac8-5828d0abef1f",
+                        3,
+                        8,
+                        13,
+                    ),
+                    SimpleRemoKey(
+                        {11},
+                        "934f5876-4c99-45d7-a2c6-d3c83fd0ec37",
+                        TextIcon(text="dir"),
+                    ),
                     ACVolumeKey({12}, "02f3e48c-50c8-40f2-aac8-5828d0abef1f"),
                     StaticKey(
                         {0}, MarkerIcon(text="AC", position="left", kind="triangle")

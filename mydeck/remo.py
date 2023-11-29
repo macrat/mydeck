@@ -160,9 +160,12 @@ class ACKey(Application, ABC):
     async def draw(self, ctx: Context) -> None:
         pass
 
+    async def initial_draw(self, ctx: Context) -> None:
+        ctx.set_image(self.key_numbers, self.loading_icon)
+
     async def on_display(self, ctx: Context) -> None:
         self.showing = True
-        ctx.set_image(self.key_numbers, self.loading_icon)
+        await self.initial_draw(ctx)
 
         if self.showing:
             await self.draw(ctx)
@@ -212,9 +215,8 @@ class ACModeKeySet(ACKey):
         self,
         appliance_id: str,
         keys: dict[int, ACModeKeySetting],
-        loading_icon: Icon = ColorIcon(),
     ):
-        super().__init__(set(keys.keys()), appliance_id, loading_icon)
+        super().__init__(set(keys.keys()), appliance_id)
 
         self.keys = keys
 
@@ -231,6 +233,12 @@ class ACModeKeySet(ACKey):
                 {key}, setting.icon(on=state.power and state.mode == setting.mode)
             )
 
+    async def initial_draw(self, ctx: Context) -> None:
+        for key, setting in self.keys.items():
+            ctx.set_image(
+                {key}, setting.icon(on=False)
+            )
+
     async def on_press(self, ctx: Context, key_number: int):
         if key_number not in self.keys:
             return
@@ -241,6 +249,8 @@ class ACModeKeySet(ACKey):
         else:
             state.mode = self.keys[key_number].mode
             state.power = True
+        state.temperature = ""
+        state.volume = ""
         await self.set_state(ctx, state)
 
 
@@ -253,7 +263,7 @@ class ACTempKeySet(ACKey):
         middle_key: int,
         bottom_key: int,
     ):
-        super().__init__({up_key, middle_key, bottom_key}, appliance_id, ColorIcon())
+        super().__init__({up_key, middle_key, bottom_key}, appliance_id)
 
         self.device_id = device_id
         self.up_key = up_key
@@ -294,6 +304,21 @@ class ACTempKeySet(ACKey):
         ctx.set_image(
             {self.bottom_key}, GaugeIcon(text="▼", value=level, n_keys=3, key_offset=0)
         )
+
+    async def initial_draw(self, ctx: Context) -> None:
+        ctx.set_image({self.up_key}, TextIcon(text="▲"))
+        ctx.set_image({self.middle_key}, TextIcon(text="--℃"))
+        ctx.set_image({self.bottom_key}, TextIcon(text="▼"))
+
+    async def on_display(self, ctx: Context) -> None:
+        await super().on_display(ctx)
+
+        async def loop():
+            while self.showing:
+                await self.draw(ctx)
+                await asyncio.sleep(1)
+
+        ctx.now(loop)
 
     async def on_press(self, ctx: Context, key_number: int):
         if key_number != self.up_key and key_number != self.bottom_key:
@@ -344,7 +369,7 @@ class ACTempKeySet(ACKey):
 
 class ACVolumeKey(ACKey):
     def __init__(self, key_numbers: set[int], appliance_id: str):
-        super().__init__(key_numbers, appliance_id, ColorIcon())
+        super().__init__(key_numbers, appliance_id, TextIcon(text="---"))
 
         self.pressed_at = 0.0
         self.target = -1
@@ -357,7 +382,7 @@ class ACVolumeKey(ACKey):
             volume = state.volume_list[self.target]
 
         if volume == "auto":
-            ctx.set_image(self.key_numbers, TextIcon(text=volume))
+            ctx.set_image(self.key_numbers, TextIcon(text="auto"))
         else:
             level = state.volume_list.index(volume) / (len(state.volume_list) - 2)
             ctx.set_image(self.key_numbers, GaugeIcon(text=f"{level:.0%}", value=level))
@@ -383,31 +408,6 @@ class ACVolumeKey(ACKey):
                 await self.set_state(ctx, state)
 
             self.target = -1
-
-
-class RoomTempKey(Application):
-    def __init__(self, key_numbers: set[int], device_id: str):
-        super().__init__(key_numbers)
-
-        self.device_id = device_id
-        self.showing = False
-
-    async def draw(self, ctx: Context):
-        state = await NatureRemo.get_room_state(self.device_id)
-        ctx.set_image(self.key_numbers, TextIcon(text=f"{state.temperature}℃"))
-
-    async def on_display(self, ctx: Context) -> None:
-        self.showing = True
-
-        async def loop():
-            while self.showing:
-                await self.draw(ctx)
-                await asyncio.sleep(60)
-
-        ctx.now(loop)
-
-    async def on_hide(self, ctx: Context) -> None:
-        self.showing = False
 
 
 class SimpleRemoKey(Application):

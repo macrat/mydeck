@@ -145,20 +145,19 @@ class GaugeIcon(Icon):
         image = Image.new("RGB", (72, 72), self.bg)
         draw = ImageDraw.Draw(image)
 
-        if self.value >= 1:
+        key_size = 72
+        margin_size = 13
+        total_length = key_size * self.n_keys + margin_size * (self.n_keys - 1)
+        virtual_gauge_length = int(total_length * self.value)
+
+        actual_gauge_length = max(
+            0, virtual_gauge_length - self.key_offset * (key_size + margin_size)
+        )
+
+        if actual_gauge_length >= key_size:
             draw.rectangle((0, 0, self.width, 71), fill=self.gauge)
             draw.rectangle((71 - self.width, 0, 71, 71), fill=self.gauge)
-
-        if self.value > 0:
-            key_size = 71
-            margin_size = 13
-            total_length = key_size * self.n_keys + margin_size * (self.n_keys - 1)
-            virtual_gauge_length = int(total_length * self.value)
-
-            actual_gauge_length = max(
-                0, virtual_gauge_length - self.key_offset * (key_size + margin_size)
-            )
-
+        elif actual_gauge_length > 0:
             if self.horizontal:
                 draw.rectangle((0, 0, actual_gauge_length, self.width), fill=self.gauge)
                 draw.rectangle(

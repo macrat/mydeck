@@ -235,9 +235,7 @@ class ACModeKeySet(ACKey):
 
     async def initial_draw(self, ctx: Context) -> None:
         for key, setting in self.keys.items():
-            ctx.set_image(
-                {key}, setting.icon(on=False)
-            )
+            ctx.set_image({key}, setting.icon(on=False))
 
     async def on_press(self, ctx: Context, key_number: int):
         if key_number not in self.keys:

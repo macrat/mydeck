@@ -52,6 +52,7 @@ class Hue:
 
     __lock: asyncio.Lock = asyncio.Lock()
     __lights_cache: LightsCache = LightsCache(lights=[], timestamp=0)
+    __groups_cache: tuple[dict[str, bool], float] = ({}, 0)
 
     @classmethod
     async def find_bridge(cls) -> str:
@@ -120,6 +121,21 @@ class Hue:
     async def set_on(cls, id_: str, on: bool) -> None:
         await cls.request("PUT", f"/resource/light/{id_}", {"on": {"on": on}})
 
+    @classmethod
+    async def get_groups(cls) -> dict[str, bool]:
+        async with cls.__lock:
+            if time.time() - cls.__groups_cache[1] < 1:
+                return cls.__groups_cache[0]
+
+            raw = await cls.request("GET", "/resource/grouped_light")
+            groups = {x["id"]: x["on"]["on"] for x in raw["data"]}
+            cls.__groups_cache = (groups, time.time())
+            return groups
+
+    @classmethod
+    async def set_group_on(cls, id_: str, on: bool) -> None:
+        await cls.request("PUT", f"/resource/grouped_light/{id_}", {"on": {"on": on}})
+
 
 class LightKey(Application):
     def __init__(self, key_numbers: set[int], id_: str, name: str) -> None:
@@ -151,9 +167,10 @@ class LightKey(Application):
                 self.color = light.color
                 self.on = light.on
 
-                await self.draw(ctx)
+                if self.showing:
+                    await self.draw(ctx)
 
-                await asyncio.sleep(5)
+                await asyncio.sleep(1)
 
         ctx.now(loop)
 
@@ -163,4 +180,52 @@ class LightKey(Application):
     async def on_press(self, ctx: Context, key_number: int) -> None:
         self.on = not self.on
         await Hue.set_on(self.id, self.on)
+        await self.draw(ctx)
+
+
+class LightGroupKey(Application):
+    def __init__(self, key_numbers: set[int], id_: str, name: str) -> None:
+        super().__init__(key_numbers)
+        self.name = name
+        self.id = id_
+        self.on = False
+        self.showing = False
+
+    async def draw(self, ctx: Context) -> None:
+        icon: Icon
+        if self.on:
+            icon = MarkerIcon(
+                marker_color=(255, 255, 255),
+                text=self.name,
+                width=12,
+                kind="triangle",
+            )
+        else:
+            icon = TextIcon(text=self.name)
+        ctx.set_image(self.key_numbers, icon)
+
+    async def on_display(self, ctx: Context) -> None:
+        self.showing = True
+
+        ctx.set_image(self.key_numbers, TextIcon(text=self.name))
+        await self.draw(ctx)
+
+        async def loop() -> None:
+            while self.showing:
+                groups = await Hue.get_groups()
+                self.on = groups[self.id]
+
+                if self.showing:
+                    await self.draw(ctx)
+
+                await asyncio.sleep(1)
+
+        ctx.now(loop)
+
+    async def on_hide(self, ctx: Context) -> None:
+        self.showing = False
+
+    async def on_press(self, ctx: Context, key_number: int) -> None:
+        self.on = not self.on
+        await Hue.set_group_on(self.id, self.on)
         await self.draw(ctx)

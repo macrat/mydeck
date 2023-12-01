@@ -19,7 +19,7 @@ from mydeck.remo import (
     ACVolumeKey,
     SimpleRemoKey,
 )
-from mydeck.hue import LightKey
+from mydeck.hue import LightKey, LightGroupKey
 
 
 def main() -> None:
@@ -128,6 +128,7 @@ def main() -> None:
                     LightKey({7}, "8c3d3f53-425e-4a68-8d8d-03c2ef0d81f0", "Mon-R"),
                     LightKey({8}, "8194ad68-2a58-4744-8933-b95bd6af42d3", "Cnt-R"),
                     LightKey({11}, "2696d10c-29d1-4c34-894c-f6853dbe39a2", "Rer-L"),
+                    LightGroupKey({12}, "ab8e08a9-9a5f-4604-be62-20e6c1ac63e4", "All"),
                     LightKey({13}, "6c35ff7a-a0b6-4b81-8941-4185e755b6a9", "Rer-R"),
                     StaticKey(
                         {5}, MarkerIcon(text="LIGHT", position="left", kind="triangle")
